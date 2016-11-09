@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 import com.emergya.descartes.content.DescartesContentProxy;
 import com.emergya.descartes.content.DescartesZipContentProxy;
 import com.emergya.descartes.job.JobValidator;
+import com.emergya.descartes.main.Main;
 import com.emergya.descartes.services.OdePublisher;
 import com.emergya.descartes.utils.FileManager;
 
@@ -58,6 +59,9 @@ public class PublishWorker extends BaseWorker implements Runnable {
 									.getPublisherContentPath(),
 									contentPublished.getFileName().toFile()
 											.getName());
+							
+							//Borramos fichero original
+							FileManager.deleteFilesInFolder(contentPublished.getFileName().toFile());
 						} else {
 							currentJob.getContentsPublishedError().add(
 									contentToPublish);
@@ -68,6 +72,15 @@ public class PublishWorker extends BaseWorker implements Runnable {
 							+ (currentJob.getContentsPublished().size()));
 					log.info("****PUBLICACIÓN FINALIZADA****");
 					currentJob.setPublishQueueReadyFlag(true);
+					
+					// Eliminamos el contenido del directorio working
+					FileManager.deleteFilesInFolder(new File(currentJob.getJobConfig()
+							.getWorkingPath()));
+					
+					if(Main.recursosPdte()){
+						log.debug("\n ####################### \n LOTE FINALIZADO, REINTENTO \n ####################### \n");
+						Main.execute();
+					}
 				}
 			} catch (InterruptedException e1) {
 				log.error("Interrupción de la cola de punlicación", e1);
@@ -88,9 +101,7 @@ public class PublishWorker extends BaseWorker implements Runnable {
 		log.info("Contenidos que han provocado errores en la publicación: "
 				+ currentJob.getContentsValidateError().size());
 
-		// Eliminamos el contenido del directorio working
-		FileManager.deleteFilesInFolder(new File(currentJob.getJobConfig()
-				.getWorkingPath()));
+		
 	}
 
 	/**
